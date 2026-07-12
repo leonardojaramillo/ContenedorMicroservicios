@@ -1,0 +1,279 @@
+package com.grapevine.purchase.purchase;
+
+import com.grapevine.purchase.client.FinanceClient;
+import com.grapevine.purchase.client.InventoryClient;
+import com.grapevine.purchase.client.ProductClient;
+import com.grapevine.purchase.client.dto.AdjustStockRequest;
+import com.grapevine.purchase.client.dto.BankAccountResponse;
+import com.grapevine.purchase.client.dto.ProductResponse;
+import com.grapevine.purchase.client.dto.WarehouseResponse;
+import com.grapevine.purchase.client.dto.WarehouseStockResponse;
+import com.grapevine.purchase.purchase.dto.*;
+import com.grapevine.purchase.supplier.Supplier;
+import com.grapevine.purchase.supplier.SupplierRepository;
+import com.grapevine.purchase.client.AuditClient;
+import com.grapevine.purchase.client.dto.CreateAuditLogRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class PurchaseService {
+
+    private static final BigDecimal USD_EXCHANGE_RATE = new BigDecimal("3.41");
+
+    private final PurchaseRepository purchaseRepository;
+    private final SupplierRepository supplierRepository;
+    private final FinanceClient      financeClient;
+    private final ProductClient      productClient;
+    private final InventoryClient    inventoryClient;
+    private final AuditClient auditClient;
+
+    public PurchaseResponse create(CreatePurchaseRequest request) {
+        Supplier supplier = supplierRepository.findById(request.getSupplierId()).orElseThrow();
+
+        if (request.getBankAccountId() != null) {
+            financeClient.getBankAccount(request.getBankAccountId());
+        }
+
+        if (request.getWarehouseId() != null) {
+            productClient.getWarehouse(request.getWarehouseId());
+        }
+
+        Purchase purchase = new Purchase();
+        purchase.setSupplier(supplier);
+        purchase.setBankAccountId(request.getBankAccountId());
+        purchase.setWarehouseId(request.getWarehouseId());
+        purchase.setStatus(PurchaseStatus.DRAFT);
+        purchase.setCreatedAt(LocalDateTime.now());
+
+        List<PurchaseDetail> details = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (PurchaseItemRequest item : request.getItems()) {
+            ProductResponse product = productClient.getProduct(item.getProductId());
+            BigDecimal subtotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            details.add(PurchaseDetail.builder()
+                    .purchase(purchase)
+                    .productId(product.getId())
+                    .productName(product.getName())
+                    .quantity(item.getQuantity())
+                    .price(item.getPrice())
+                    .subtotal(subtotal)
+                    .build());
+            total = total.add(subtotal);
+        }
+
+        purchase.setDetails(details);
+        purchase.setTotal(total);
+
+
+        return toResponse(purchaseRepository.save(purchase));
+    }
+
+    public PurchaseResponse update(Long id, CreatePurchaseRequest request) {
+        Purchase purchase = purchaseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Compra no encontrada"));
+
+        if (purchase.getStatus() != PurchaseStatus.DRAFT) {
+            throw new RuntimeException("Solo se pueden editar órdenes en borrador");
+        }
+
+        Supplier supplier = supplierRepository.findById(request.getSupplierId()).orElseThrow();
+        purchase.setSupplier(supplier);
+        purchase.setBankAccountId(request.getBankAccountId());
+        purchase.setWarehouseId(request.getWarehouseId());
+
+        purchase.getDetails().clear();
+        purchaseRepository.saveAndFlush(purchase);
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (PurchaseItemRequest item : request.getItems()) {
+            ProductResponse product = productClient.getProduct(item.getProductId());
+            BigDecimal subtotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            purchase.getDetails().add(PurchaseDetail.builder()
+                    .purchase(purchase)
+                    .productId(product.getId())
+                    .productName(product.getName())
+                    .quantity(item.getQuantity())
+                    .price(item.getPrice())
+                    .subtotal(subtotal)
+                    .build());
+            total = total.add(subtotal);
+        }
+
+        purchase.setTotal(total);
+
+
+
+        return toResponse(purchaseRepository.save(purchase));
+    }
+
+    public List<PurchaseResponse> findAll() {
+        return purchaseRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public PurchaseResponse updateStatus(Long id, PurchaseStatus newStatus) {
+        Purchase purchase = purchaseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Compra no encontrada"));
+
+        validateTransition(purchase.getStatus(), newStatus);
+
+        if (newStatus == PurchaseStatus.PAID) {
+            throw new RuntimeException("Usa el endpoint /pay con el comprobante de pago");
+        }
+
+        if (newStatus == PurchaseStatus.RECEIVED) {
+            receiveIntoWarehouse(purchase);
+        }
+
+        purchase.setStatus(newStatus);
+        Purchase saved = purchaseRepository.save(purchase);
+
+        try {
+            auditClient.record(new CreateAuditLogRequest("COMPRA_" + newStatus, "Compra #" + saved.getId() + " cambió a estado " + newStatus, null));
+        } catch (Exception ignored) {}
+
+
+        return toResponse(saved);
+    }
+
+    @Transactional
+    public PurchaseResponse pay(Long id, PayPurchaseRequest request) {
+        Purchase purchase = purchaseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Compra no encontrada"));
+
+        validateTransition(purchase.getStatus(), PurchaseStatus.PAID);
+
+        if (request.getPaymentProofUrl() == null || request.getPaymentProofUrl().isBlank()) {
+            throw new RuntimeException("Debes adjuntar el comprobante de pago (imagen de transferencia o yape)");
+        }
+
+        if (purchase.getBankAccountId() != null) {
+            BankAccountResponse account = financeClient.getBankAccount(purchase.getBankAccountId());
+            BigDecimal amountToDeduct = convertToAccountCurrency(purchase.getTotal(), account.getCurrency());
+            financeClient.deductBalance(purchase.getBankAccountId(), amountToDeduct);
+        }
+
+        purchase.setStatus(PurchaseStatus.PAID);
+        purchase.setPaymentProofUrl(request.getPaymentProofUrl());
+        Purchase saved = purchaseRepository.save(purchase);
+
+        financeClient.recordAutomaticExpense(
+                purchase.getTotal(),
+                "Pago a " + (purchase.getSupplier() != null ? purchase.getSupplier().getName() : "proveedor")
+                        + " — Compra #" + saved.getId() + " (no afecta efectivo, pagado por banco)"
+        );
+
+        try {
+            auditClient.record(new CreateAuditLogRequest("COMPRA_PAID", "Compra #" + saved.getId() + " pagada con comprobante adjunto", null));
+        } catch (Exception ignored) {}
+
+        return toResponse(saved);
+    }
+
+    private void receiveIntoWarehouse(Purchase purchase) {
+        if (purchase.getWarehouseId() == null) {
+            throw new RuntimeException("Debes asignar un almacén de destino antes de recibir la compra");
+        }
+
+        List<WarehouseStockResponse> currentStocks = inventoryClient.getStockByWarehouse(purchase.getWarehouseId());
+
+        for (PurchaseDetail detail : purchase.getDetails()) {
+            int currentStock = currentStocks.stream()
+                    .filter(ws -> ws.getProductId().equals(detail.getProductId()))
+                    .map(WarehouseStockResponse::getStock)
+                    .findFirst()
+                    .orElse(0);
+
+            AdjustStockRequest adjustRequest = new AdjustStockRequest();
+            adjustRequest.setProductId(detail.getProductId());
+            adjustRequest.setWarehouseId(purchase.getWarehouseId());
+            adjustRequest.setNewStock(currentStock + detail.getQuantity());
+            adjustRequest.setReason("Recepción de compra #" + purchase.getId());
+
+            inventoryClient.adjustStock(adjustRequest);
+        }
+    }
+
+    private BigDecimal convertToAccountCurrency(BigDecimal amountInSoles, String accountCurrency) {
+        if ("USD".equalsIgnoreCase(accountCurrency)) {
+            return amountInSoles.divide(USD_EXCHANGE_RATE, 2, RoundingMode.HALF_UP);
+        }
+        return amountInSoles;
+    }
+
+    private void validateTransition(PurchaseStatus current, PurchaseStatus next) {
+        boolean valid = switch (current) {
+            case DRAFT     -> next == PurchaseStatus.SENT      || next == PurchaseStatus.CANCELLED;
+            case SENT      -> next == PurchaseStatus.CONFIRMED || next == PurchaseStatus.CANCELLED;
+            case CONFIRMED -> next == PurchaseStatus.RECEIVED  || next == PurchaseStatus.CANCELLED;
+            case RECEIVED  -> next == PurchaseStatus.PAID;
+            default        -> false;
+        };
+
+        if (!valid) throw new RuntimeException(
+                "Transición inválida: " + current + " → " + next
+        );
+    }
+
+    private String buildAccountLabel(BankAccountResponse account) {
+        String base = account.getBank() + " - " + account.getAccountNumber();
+        return account.getAccountName() != null && !account.getAccountName().isBlank()
+                ? account.getAccountName() + " (" + base + ")"
+                : base;
+    }
+
+    private PurchaseResponse toResponse(Purchase p) {
+        String bankAccountName = "Sin cuenta asignada";
+        if (p.getBankAccountId() != null) {
+            try {
+                BankAccountResponse account = financeClient.getBankAccount(p.getBankAccountId());
+                bankAccountName = buildAccountLabel(account);
+            } catch (Exception e) {
+                bankAccountName = "Cuenta no disponible";
+            }
+        }
+
+        String warehouseName = "Sin almacén asignado";
+        if (p.getWarehouseId() != null) {
+            try {
+                WarehouseResponse warehouse = productClient.getWarehouse(p.getWarehouseId());
+                warehouseName = warehouse.getName();
+            } catch (Exception e) {
+                warehouseName = "Almacén no disponible";
+            }
+        }
+
+        return PurchaseResponse.builder()
+                .id(p.getId())
+                .supplierName(p.getSupplier() != null ? p.getSupplier().getName() : "—")
+                .bankAccountName(bankAccountName)
+                .warehouseName(warehouseName)
+                .status(p.getStatus())
+                .total(p.getTotal())
+                .createdAt(p.getCreatedAt())
+                .paymentProofUrl(p.getPaymentProofUrl())
+                .items(p.getDetails() != null ? p.getDetails().stream()
+                                                .map(d -> PurchaseItemResponse.builder()
+                                                          .productName(d.getProductName())
+                                                          .quantity(d.getQuantity())
+                                                          .price(d.getPrice())
+                                                          .subtotal(d.getSubtotal())
+                                                          .build())
+                                                .toList() : List.of())
+                .build();
+    }
+}

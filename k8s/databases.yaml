@@ -1,0 +1,213 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-auth
+spec:
+  selector: { app: postgres-auth }
+  ports: [{ port: 5432, targetPort: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-auth
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres-auth } }
+  template:
+    metadata: { labels: { app: postgres-auth } }
+    spec:
+      containers:
+        - name: postgres-auth
+          image: postgres:16-alpine
+          ports: [{ containerPort: 5432 }]
+          env:
+            - { name: POSTGRES_DB, value: auth_db }
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_PASSWORD, value: postgres }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-product
+spec:
+  selector: { app: postgres-product }
+  ports: [{ port: 5432, targetPort: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-product
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres-product } }
+  template:
+    metadata: { labels: { app: postgres-product } }
+    spec:
+      containers:
+        - name: postgres-product
+          image: postgres:16-alpine
+          ports: [{ containerPort: 5432 }]
+          env:
+            - { name: POSTGRES_DB, value: product_db }
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_PASSWORD, value: postgres }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-finance
+spec:
+  selector: { app: postgres-finance }
+  ports: [{ port: 5432, targetPort: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-finance
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres-finance } }
+  template:
+    metadata: { labels: { app: postgres-finance } }
+    spec:
+      containers:
+        - name: postgres-finance
+          image: postgres:16-alpine
+          ports: [{ containerPort: 5432 }]
+          env:
+            - { name: POSTGRES_DB, value: finance_db }
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_PASSWORD, value: postgres }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-purchase
+spec:
+  selector: { app: mysql-purchase }
+  ports: [{ port: 3306, targetPort: 3306 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-purchase
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: mysql-purchase } }
+  template:
+    metadata: { labels: { app: mysql-purchase } }
+    spec:
+      containers:
+        - name: mysql-purchase
+          image: mysql:8
+          ports: [{ containerPort: 3306 }]
+          env:
+            - { name: MYSQL_DATABASE, value: purchase_db }
+            - { name: MYSQL_ROOT_PASSWORD, value: root }
+            - { name: MYSQL_USER, value: purchase_user }
+            - { name: MYSQL_PASSWORD, value: purchase_pass }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-sales
+spec:
+  selector: { app: mysql-sales }
+  ports: [{ port: 3306, targetPort: 3306 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-sales
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: mysql-sales } }
+  template:
+    metadata: { labels: { app: mysql-sales } }
+    spec:
+      containers:
+        - name: mysql-sales
+          image: mysql:8
+          ports: [{ containerPort: 3306 }]
+          env:
+            - { name: MYSQL_DATABASE, value: sales_db }
+            - { name: MYSQL_ROOT_PASSWORD, value: root }
+            - { name: MYSQL_USER, value: sales_user }
+            - { name: MYSQL_PASSWORD, value: sales_pass }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timescaledb-inventory
+spec:
+  selector: { app: timescaledb-inventory }
+  ports: [{ port: 5432, targetPort: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timescaledb-inventory
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: timescaledb-inventory } }
+  template:
+    metadata: { labels: { app: timescaledb-inventory } }
+    spec:
+      containers:
+        - name: timescaledb-inventory
+          image: timescale/timescaledb:latest-pg16
+          ports: [{ containerPort: 5432 }]
+          env:
+            - { name: POSTGRES_DB, value: inventory_db }
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_PASSWORD, value: postgres }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-audit
+spec:
+  selector: { app: elasticsearch-audit }
+  ports: [{ port: 9200, targetPort: 9200 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-audit
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: elasticsearch-audit } }
+  template:
+    metadata: { labels: { app: elasticsearch-audit } }
+    spec:
+      containers:
+        - name: elasticsearch-audit
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+          ports: [{ containerPort: 9200 }]
+          env:
+            - { name: discovery.type, value: single-node }
+            - { name: xpack.security.enabled, value: "false" }
+            - { name: ES_JAVA_OPTS, value: "-Xms512m -Xmx512m" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-reporting
+spec:
+  selector: { app: redis-reporting }
+  ports: [{ port: 6379, targetPort: 6379 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-reporting
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: redis-reporting } }
+  template:
+    metadata: { labels: { app: redis-reporting } }
+    spec:
+      containers:
+        - name: redis-reporting
+          image: redis:7-alpine
+          ports: [{ containerPort: 6379 }]

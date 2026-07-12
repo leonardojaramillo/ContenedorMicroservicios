@@ -1,0 +1,348 @@
+services:
+
+  # ============ BASES DE DATOS ============
+
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-product:
+    image: postgres:16-alpine
+    container_name: postgres-product
+    environment:
+      POSTGRES_DB: product_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-product-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-finance:
+    image: postgres:16-alpine
+    container_name: postgres-finance
+    environment:
+      POSTGRES_DB: finance_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-finance-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mysql-purchase:
+    image: mysql:8
+    container_name: mysql-purchase
+    environment:
+      MYSQL_DATABASE: purchase_db
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: purchase_user
+      MYSQL_PASSWORD: purchase_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-purchase-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mysql-sales:
+    image: mysql:8
+    container_name: mysql-sales
+    environment:
+      MYSQL_DATABASE: sales_db
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: sales_user
+      MYSQL_PASSWORD: sales_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-sales-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  timescaledb-inventory:
+    image: timescale/timescaledb:latest-pg16
+    container_name: timescaledb-inventory
+    environment:
+      POSTGRES_DB: inventory_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - timescaledb-inventory-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  elasticsearch-audit:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: elasticsearch-audit
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-audit-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  redis-reporting:
+    image: redis:7-alpine
+    container_name: redis-reporting
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ============ INFRAESTRUCTURA ============
+
+  config-server:
+    build: ./config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    restart: on-failure
+
+  discovery-service:
+    build: ./discovery-service
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-server
+    restart: on-failure
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+    depends_on:
+      - config-server
+      - discovery-service
+    restart: on-failure
+
+  # ============ MICROSERVICIOS DE NEGOCIO ============
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: test@example.com
+      SPRING_MAIL_PASSWORD: fakepassword
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+      postgres-auth:
+        condition: service_healthy
+    restart: on-failure
+
+  product-service:
+    build: ./product-service
+    container_name: product-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-product:5432/product_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+      postgres-product:
+        condition: service_healthy
+    restart: on-failure
+
+  purchase-service:
+    build: ./purchase-service
+    container_name: purchase-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-purchase:3306/purchase_db
+      SPRING_DATASOURCE_USERNAME: purchase_user
+      SPRING_DATASOURCE_PASSWORD: purchase_pass
+      JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+      mysql-purchase:
+        condition: service_healthy
+    restart: on-failure
+
+  finance-service:
+    build: ./finance-service
+    container_name: finance-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-finance:5432/finance_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+      postgres-finance:
+        condition: service_healthy
+    restart: on-failure
+
+  sales-service:
+    build: ./sales-service
+    container_name: sales-service
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-sales:3306/sales_db
+      SPRING_DATASOURCE_USERNAME: sales_user
+      SPRING_DATASOURCE_PASSWORD: sales_pass
+      JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+      mysql-sales:
+        condition: service_healthy
+    restart: on-failure
+
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://timescaledb-inventory:5432/inventory_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+      timescaledb-inventory:
+        condition: service_healthy
+    restart: on-failure
+
+  audit-service:
+    build: ./audit-service
+    container_name: audit-service
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch-audit:9200
+      JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+      elasticsearch-audit:
+        condition: service_healthy
+    restart: on-failure
+
+  reporting-service:
+    build: ./reporting-service
+    container_name: reporting-service
+    ports:
+      - "8088:8088"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_URI: http://discovery-service:8761/eureka/
+      SPRING_REDIS_HOST: redis-reporting
+      SPRING_REDIS_PORT: 6379
+      JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
+    depends_on:
+      config-server:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+      redis-reporting:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  postgres-auth-data:
+  postgres-product-data:
+  postgres-finance-data:
+  mysql-purchase-data:
+  mysql-sales-data:
+  timescaledb-inventory-data:
+  elasticsearch-audit-data:

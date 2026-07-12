@@ -1,0 +1,265 @@
+# ============ AUTH SERVICE ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  selector: { app: auth-service }
+  ports: [{ port: 8081, targetPort: 8081 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: auth-service } }
+  template:
+    metadata: { labels: { app: auth-service } }
+    spec:
+      containers:
+        - name: auth-service
+          image: grapevine/auth-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8081 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
+            - { name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://postgres-auth:5432/auth_db" }
+            - { name: SPRING_DATASOURCE_USERNAME, value: "postgres" }
+            - { name: SPRING_DATASOURCE_PASSWORD, value: "postgres" }
+            - { name: JWT_SECRET, value: "una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890" }
+            - { name: SPRING_MAIL_HOST, value: "smtp.gmail.com" }
+            - { name: SPRING_MAIL_PORT, value: "587" }
+            - { name: SPRING_MAIL_USERNAME, value: "test@example.com" }
+            - { name: SPRING_MAIL_PASSWORD, value: "fakepassword" }
+            - { name: SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH, value: "true" }
+            - { name: SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE, value: "true" }
+
+---
+# ============ PRODUCT SERVICE ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+spec:
+  selector: { app: product-service }
+  ports: [{ port: 8082, targetPort: 8082 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: product-service } }
+  template:
+    metadata: { labels: { app: product-service } }
+    spec:
+      containers:
+        - name: product-service
+          image: grapevine/product-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8082 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
+            - { name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://postgres-product:5432/product_db" }
+            - { name: SPRING_DATASOURCE_USERNAME, value: "postgres" }
+            - { name: SPRING_DATASOURCE_PASSWORD, value: "postgres" }
+            - { name: JWT_SECRET, value: "una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890" }
+
+---
+# ============ PURCHASE SERVICE ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: purchase-service
+spec:
+  selector: { app: purchase-service }
+  ports: [{ port: 8083, targetPort: 8083 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: purchase-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: purchase-service } }
+  template:
+    metadata: { labels: { app: purchase-service } }
+    spec:
+      containers:
+        - name: purchase-service
+          image: grapevine/purchase-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8083 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
+            - { name: SPRING_DATASOURCE_URL, value: "jdbc:mysql://mysql-purchase:3306/purchase_db" }
+            - { name: SPRING_DATASOURCE_USERNAME, value: "purchase_user" }
+            - { name: SPRING_DATASOURCE_PASSWORD, value: "purchase_pass" }
+            - { name: JWT_SECRET, value: "una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890" }
+
+---
+# ============ FINANCE SERVICE ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: finance-service
+spec:
+  selector: { app: finance-service }
+  ports: [{ port: 8084, targetPort: 8084 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finance-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: finance-service } }
+  template:
+    metadata: { labels: { app: finance-service } }
+    spec:
+      containers:
+        - name: finance-service
+          image: grapevine/finance-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8084 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
+            - { name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://postgres-finance:5432/finance_db" }
+            - { name: SPRING_DATASOURCE_USERNAME, value: "postgres" }
+            - { name: SPRING_DATASOURCE_PASSWORD, value: "postgres" }
+            - { name: JWT_SECRET, value: "una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890" }
+
+---
+# ============ SALES SERVICE ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: sales-service
+spec:
+  selector: { app: sales-service }
+  ports: [{ port: 8085, targetPort: 8085 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sales-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: sales-service } }
+  template:
+    metadata: { labels: { app: sales-service } }
+    spec:
+      containers:
+        - name: sales-service
+          image: grapevine/sales-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8085 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
+            - { name: SPRING_DATASOURCE_URL, value: "jdbc:mysql://mysql-sales:3306/sales_db" }
+            - { name: SPRING_DATASOURCE_USERNAME, value: "sales_user" }
+            - { name: SPRING_DATASOURCE_PASSWORD, value: "sales_pass" }
+            - { name: JWT_SECRET, value: "una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890" }
+
+---
+# ============ INVENTORY SERVICE ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+spec:
+  selector: { app: inventory-service }
+  ports: [{ port: 8086, targetPort: 8086 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: inventory-service } }
+  template:
+    metadata: { labels: { app: inventory-service } }
+    spec:
+      containers:
+        - name: inventory-service
+          image: grapevine/inventory-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8086 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
+            - { name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://timescaledb-inventory:5432/inventory_db" }
+            - { name: SPRING_DATASOURCE_USERNAME, value: "postgres" }
+            - { name: SPRING_DATASOURCE_PASSWORD, value: "postgres" }
+            - { name: JWT_SECRET, value: "una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890" }
+
+---
+# ============ AUDIT SERVICE ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit-service
+spec:
+  selector: { app: audit-service }
+  ports: [{ port: 8087, targetPort: 8087 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: audit-service } }
+  template:
+    metadata: { labels: { app: audit-service } }
+    spec:
+      containers:
+        - name: audit-service
+          image: grapevine/audit-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8087 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
+            - { name: SPRING_ELASTICSEARCH_URIS, value: "http://elasticsearch-audit:9200" }
+            - { name: JWT_SECRET, value: "una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890" }
+
+---
+# ============ REPORTING SERVICE ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-service
+spec:
+  selector: { app: reporting-service }
+  ports: [{ port: 8088, targetPort: 8088 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: reporting-service } }
+  template:
+    metadata: { labels: { app: reporting-service } }
+    spec:
+      containers:
+        - name: reporting-service
+          image: grapevine/reporting-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8088 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
+            - { name: SPRING_REDIS_HOST, value: "redis-reporting" }
+            - { name: SPRING_REDIS_PORT, value: "6379" }
+            - { name: JWT_SECRET, value: "una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890" }

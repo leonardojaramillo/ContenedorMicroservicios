@@ -1,0 +1,82 @@
+# ============ CONFIG SERVER ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+spec:
+  selector: { app: config-server }
+  ports: [{ port: 8888, targetPort: 8888 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: config-server } }
+  template:
+    metadata: { labels: { app: config-server } }
+    spec:
+      containers:
+        - name: config-server
+          image: grapevine/config-server
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8888 }]
+
+---
+# ============ DISCOVERY SERVICE (Eureka) ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-service
+spec:
+  selector: { app: discovery-service }
+  ports: [{ port: 8761, targetPort: 8761 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-service
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: discovery-service } }
+  template:
+    metadata: { labels: { app: discovery-service } }
+    spec:
+      containers:
+        - name: discovery-service
+          image: grapevine/discovery-service
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8761 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+
+---
+# ============ API GATEWAY ============
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  type: LoadBalancer
+  selector: { app: api-gateway }
+  ports: [{ port: 8080, targetPort: 8080 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: api-gateway } }
+  template:
+    metadata: { labels: { app: api-gateway } }
+    spec:
+      containers:
+        - name: api-gateway
+          image: grapevine/api-gateway
+          imagePullPolicy: Never
+          ports: [{ containerPort: 8080 }]
+          env:
+            - { name: SPRING_CONFIG_IMPORT, value: "optional:configserver:http://config-server:8888" }
+            - { name: EUREKA_URI, value: "http://discovery-service:8761/eureka/" }
