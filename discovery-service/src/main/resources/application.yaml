@@ -1,5 +1,8 @@
+server:
+  port: 8761
+
 spring:
   application:
     name: discovery-service
   config:
-    import: ${SPRING_CONFIG_IMPORT:optional:configserver:http://localhost:8888}
+    import: optional:configserver:http://config-server:8888
