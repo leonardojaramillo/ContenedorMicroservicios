@@ -12,8 +12,9 @@ import org.springframework.data.elasticsearch.core.query.CriteriaQuery;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -24,12 +25,14 @@ public class AuditLogService {
     private final ElasticsearchTemplate elasticsearchTemplate;
 
     public void record(CreateAuditLogRequest request) {
+        String email = currentUserEmailOrNull();
+
         AuditLog log = AuditLog.builder()
                 .action(request.getAction())
                 .description(request.getDescription())
-                .performedBy(request.getPerformedBy() != null ? request.getPerformedBy() : "Sistema")
-                .performedByEmail(currentUserEmailOrNull())
-                .createdAt(LocalDateTime.now())
+                .performedBy(request.getPerformedBy() != null ? request.getPerformedBy() : (email != null ? email : "Sistema"))
+                .performedByEmail(email)
+                .createdAt(Instant.now())
                 .build();
 
         auditLogRepository.save(log);
@@ -46,7 +49,7 @@ public class AuditLogService {
         }
 
         if (from != null && !from.isBlank()) {
-            LocalDateTime rangeStart = LocalDate.parse(from).atStartOfDay();
+            Instant rangeStart = LocalDate.parse(from).atStartOfDay(ZoneOffset.UTC).toInstant();
             criteria = hasCriteria
                     ? criteria.and(new Criteria("createdAt").greaterThanEqual(rangeStart))
                     : new Criteria("createdAt").greaterThanEqual(rangeStart);
@@ -54,7 +57,7 @@ public class AuditLogService {
         }
 
         if (to != null && !to.isBlank()) {
-            LocalDateTime rangeEnd = LocalDate.parse(to).atTime(23, 59, 59);
+            Instant rangeEnd = LocalDate.parse(to).atTime(23, 59, 59).toInstant(ZoneOffset.UTC);
             criteria = hasCriteria
                     ? criteria.and(new Criteria("createdAt").lessThanEqual(rangeEnd))
                     : new Criteria("createdAt").lessThanEqual(rangeEnd);

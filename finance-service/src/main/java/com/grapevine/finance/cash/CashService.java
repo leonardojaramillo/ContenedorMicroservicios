@@ -155,6 +155,12 @@ public class CashService {
         return mapResponse(cashRegister);
     }
 
+    public List<CashRegisterResponse> getAllRegisters() {
+        return cashRegisterRepository.findAll().stream()
+                .map(this::mapResponse)
+                .toList();
+    }
+
     private CashRegisterResponse mapResponse(CashRegister cashRegister) {
         List<CashMovementResponse> movements = cashRegister.getMovements().stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))

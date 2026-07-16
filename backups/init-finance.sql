@@ -10,7 +10,6 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -39,6 +38,8 @@ CREATE TABLE public.bank_accounts (
     CONSTRAINT bank_accounts_type_check CHECK (((type)::text = ANY ((ARRAY['AHORRO'::character varying, 'CORRIENTE'::character varying])::text[])))
 );
 
+ALTER TABLE ONLY public.bank_accounts ADD CONSTRAINT bank_accounts_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: cash_movements; Type: TABLE; Schema: public; Owner: -
@@ -57,6 +58,8 @@ CREATE TABLE public.cash_movements (
     CONSTRAINT cash_movements_type_check CHECK (((type)::text = ANY ((ARRAY['INCOME'::character varying, 'EXPENSE'::character varying])::text[])))
 );
 
+ALTER TABLE ONLY public.cash_movements ADD CONSTRAINT cash_movements_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: cash_registers; Type: TABLE; Schema: public; Owner: -
@@ -73,6 +76,8 @@ CREATE TABLE public.cash_registers (
     user_id bigint,
     CONSTRAINT cash_registers_status_check CHECK (((status)::text = ANY ((ARRAY['OPEN'::character varying, 'CLOSED'::character varying])::text[])))
 );
+
+ALTER TABLE ONLY public.cash_registers ADD CONSTRAINT cash_registers_pkey PRIMARY KEY (id);
 
 
 --
@@ -135,7 +140,7 @@ COPY public.cash_registers (id, closed_at, closing_amount, current_balance, open
 4	2026-05-31 12:25:22.517842	6900.00	6900.00	2026-05-26 18:11:57.096857	7200.00	CLOSED	\N
 5	2026-06-02 10:52:03.058848	6500.00	6500.00	2026-05-31 12:25:27.926659	6500.00	CLOSED	\N
 6	2026-06-02 12:44:24.063281	2500.00	2500.00	2026-06-02 11:02:27.931857	2500.00	CLOSED	\N
-7	\N	\N	2820.00	2026-06-02 18:00:42.141883	2500.00	OPEN	\N
+7	2026-06-03 09:00:00.000000	2820.00	2820.00	2026-06-02 18:00:42.141883	2500.00	CLOSED	\N
 8	2026-05-30 18:17:24.635018	680.00	680.00	2026-05-29 18:17:24.635018	500.00	CLOSED	\N
 9	2026-06-09 18:17:24.635018	540.00	540.00	2026-06-08 18:17:24.635018	500.00	CLOSED	\N
 10	2026-06-19 18:17:24.635018	410.00	410.00	2026-06-18 18:17:24.635018	400.00	CLOSED	\N
@@ -204,4 +209,4 @@ SELECT pg_catalog.setval('public.cash_registers_id_seq', COALESCE((SELECT MAX(id
 -- PostgreSQL database dump complete
 --
 
-\unrestrict XfwlnjNrJ489vvfcHMAqM1D1cXdtj1mWg3J4ZkgEXgcCt0QRalfobV8DNgrix76 
+\unrestrict XfwlnjNrJ489vvfcHMAqM1D1cXdtj1mWg3J4ZkgEXgcCt0QRalfobV8DNgrix76

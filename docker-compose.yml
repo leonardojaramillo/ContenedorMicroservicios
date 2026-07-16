@@ -113,7 +113,7 @@ services:
       retries: 10
 
   elasticsearch-audit:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
     container_name: elasticsearch-audit
     environment:
       discovery.type: single-node
@@ -140,26 +140,39 @@ services:
       timeout: 5s
       retries: 10
 
-  # ============ INFRAESTRUCTURA ============
+# ============ INFRAESTRUCTURA ============
 
   config-server:
-    build: ./config-server
+    build:
+      context: .
+      dockerfile: config-server/Dockerfile
     container_name: config-server
     ports:
       - "8888:8888"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8888/api-gateway/default || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     restart: on-failure
 
   discovery-service:
-    build: ./discovery-service
+    build:
+      context: .
+      dockerfile: discovery-service/Dockerfile
     container_name: discovery-service
     ports:
       - "8761:8761"
     depends_on:
-      - config-server
+      config-server:
+        condition: service_healthy
     restart: on-failure
 
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
     container_name: api-gateway
     ports:
       - "8080:8080"
@@ -167,14 +180,18 @@ services:
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_URI: http://discovery-service:8761/eureka/
     depends_on:
-      - config-server
-      - discovery-service
+      config-server:
+        condition: service_healthy
+      discovery-service:
+        condition: service_started
     restart: on-failure
 
   # ============ MICROSERVICIOS DE NEGOCIO ============
 
   auth-service:
-    build: ./auth-service
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
     container_name: auth-service
     ports:
       - "8081:8081"
@@ -193,7 +210,7 @@ services:
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
     depends_on:
       config-server:
-        condition: service_started
+        condition: service_healthy
       discovery-service:
         condition: service_started
       postgres-auth:
@@ -201,7 +218,9 @@ services:
     restart: on-failure
 
   product-service:
-    build: ./product-service
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
     container_name: product-service
     ports:
       - "8082:8082"
@@ -214,7 +233,7 @@ services:
       JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
     depends_on:
       config-server:
-        condition: service_started
+        condition: service_healthy
       discovery-service:
         condition: service_started
       postgres-product:
@@ -222,7 +241,9 @@ services:
     restart: on-failure
 
   purchase-service:
-    build: ./purchase-service
+    build:
+      context: .
+      dockerfile: purchase-service/Dockerfile
     container_name: purchase-service
     ports:
       - "8083:8083"
@@ -235,7 +256,7 @@ services:
       JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
     depends_on:
       config-server:
-        condition: service_started
+        condition: service_healthy
       discovery-service:
         condition: service_started
       mysql-purchase:
@@ -243,7 +264,9 @@ services:
     restart: on-failure
 
   finance-service:
-    build: ./finance-service
+    build:
+      context: .
+      dockerfile: finance-service/Dockerfile
     container_name: finance-service
     ports:
       - "8084:8084"
@@ -256,7 +279,7 @@ services:
       JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
     depends_on:
       config-server:
-        condition: service_started
+        condition: service_healthy
       discovery-service:
         condition: service_started
       postgres-finance:
@@ -264,7 +287,9 @@ services:
     restart: on-failure
 
   sales-service:
-    build: ./sales-service
+    build:
+      context: .
+      dockerfile: sales-service/Dockerfile
     container_name: sales-service
     ports:
       - "8085:8085"
@@ -277,7 +302,7 @@ services:
       JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
     depends_on:
       config-server:
-        condition: service_started
+        condition: service_healthy
       discovery-service:
         condition: service_started
       mysql-sales:
@@ -285,7 +310,9 @@ services:
     restart: on-failure
 
   inventory-service:
-    build: ./inventory-service
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
     container_name: inventory-service
     ports:
       - "8086:8086"
@@ -298,7 +325,7 @@ services:
       JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
     depends_on:
       config-server:
-        condition: service_started
+        condition: service_healthy
       discovery-service:
         condition: service_started
       timescaledb-inventory:
@@ -306,7 +333,9 @@ services:
     restart: on-failure
 
   audit-service:
-    build: ./audit-service
+    build:
+      context: .
+      dockerfile: audit-service/Dockerfile
     container_name: audit-service
     ports:
       - "8087:8087"
@@ -317,7 +346,7 @@ services:
       JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
     depends_on:
       config-server:
-        condition: service_started
+        condition: service_healthy
       discovery-service:
         condition: service_started
       elasticsearch-audit:
@@ -325,7 +354,9 @@ services:
     restart: on-failure
 
   reporting-service:
-    build: ./reporting-service
+    build:
+      context: .
+      dockerfile: reporting-service/Dockerfile
     container_name: reporting-service
     ports:
       - "8088:8088"
@@ -337,7 +368,7 @@ services:
       JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
     depends_on:
       config-server:
-        condition: service_started
+        condition: service_healthy
       discovery-service:
         condition: service_started
       redis-reporting:

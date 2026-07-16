@@ -3,7 +3,7 @@ package com.grapevine.audit.dto;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Builder
@@ -13,5 +13,5 @@ public class AuditLogResponse {
     private String description;
     private String performedBy;
     private String performedByEmail;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

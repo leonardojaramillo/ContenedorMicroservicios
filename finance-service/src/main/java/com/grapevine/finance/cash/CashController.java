@@ -38,6 +38,12 @@ public class CashController {
         return cashService.getCurrentCashRegister();
     }
 
+    @GetMapping("/registers")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO', 'SOFTWARE_ENGINEER')")
+    public List<CashRegisterResponse> getAllRegisters() {
+        return cashService.getAllRegisters();
+    }
+
     @GetMapping("/movements/pending")
     @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO', 'SOFTWARE_ENGINEER')")
     public List<CashMovementResponse> getPending() {

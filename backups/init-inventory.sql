@@ -10,7 +10,6 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -37,6 +36,8 @@ CREATE TABLE public.inventory_adjustments (
     warehouse_id bigint
 );
 
+ALTER TABLE ONLY public.inventory_adjustments ADD CONSTRAINT inventory_adjustments_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: inventory_movements; Type: TABLE; Schema: public; Owner: -
@@ -53,6 +54,8 @@ CREATE TABLE public.inventory_movements (
     CONSTRAINT inventory_movements_type_check CHECK (((type)::text = ANY ((ARRAY['IN'::character varying, 'OUT'::character varying, 'TRANSFER'::character varying, 'ADJUSTMENT'::character varying])::text[])))
 );
 
+ALTER TABLE ONLY public.inventory_movements ADD CONSTRAINT inventory_movements_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: stock_transfer_details; Type: TABLE; Schema: public; Owner: -
@@ -64,6 +67,8 @@ CREATE TABLE public.stock_transfer_details (
     product_id bigint,
     transfer_id bigint
 );
+
+ALTER TABLE ONLY public.stock_transfer_details ADD CONSTRAINT stock_transfer_details_pkey PRIMARY KEY (id);
 
 
 --
@@ -77,6 +82,8 @@ CREATE TABLE public.stock_transfers (
     to_warehouse_id bigint
 );
 
+ALTER TABLE ONLY public.stock_transfers ADD CONSTRAINT stock_transfers_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: transfer_guide_items; Type: TABLE; Schema: public; Owner: -
@@ -88,6 +95,8 @@ CREATE TABLE public.transfer_guide_items (
     guide_id bigint NOT NULL,
     product_id bigint NOT NULL
 );
+
+ALTER TABLE ONLY public.transfer_guide_items ADD CONSTRAINT transfer_guide_items_pkey PRIMARY KEY (id);
 
 
 --
@@ -110,6 +119,8 @@ CREATE TABLE public.transfer_guides (
     CONSTRAINT transfer_guides_type_check CHECK (((type)::text = ANY ((ARRAY['COMPRA'::character varying, 'VENTA'::character varying, 'TRASLADO'::character varying, 'IMPORTACION'::character varying])::text[])))
 );
 
+ALTER TABLE ONLY public.transfer_guides ADD CONSTRAINT transfer_guides_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: warehouse_stock; Type: TABLE; Schema: public; Owner: -
@@ -121,6 +132,8 @@ CREATE TABLE public.warehouse_stock (
     product_id bigint,
     warehouse_id bigint
 );
+
+ALTER TABLE ONLY public.warehouse_stock ADD CONSTRAINT warehouse_stock_pkey PRIMARY KEY (id);
 
 
 --
@@ -137,6 +150,8 @@ CREATE TABLE public.warehouses (
     province character varying(255),
     ubigeo_code character varying(255)
 );
+
+ALTER TABLE ONLY public.warehouses ADD CONSTRAINT warehouses_pkey PRIMARY KEY (id);
 
 
 --

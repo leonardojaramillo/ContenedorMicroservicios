@@ -10,7 +10,6 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -39,6 +38,8 @@ CREATE TABLE public.users (
     must_change_password boolean DEFAULT false NOT NULL,
     CONSTRAINT users_role_check CHECK (((role)::text = ANY ((ARRAY['SOFTWARE_ENGINEER'::character varying, 'ADMIN'::character varying, 'CAJERO'::character varying, 'LOGISTICA'::character varying, 'VENDEDOR'::character varying])::text[])))
 );
+
+ALTER TABLE ONLY public.users ADD CONSTRAINT users_pkey PRIMARY KEY (id);
 
 
 --
@@ -80,4 +81,4 @@ SELECT pg_catalog.setval('public.users_id_seq', COALESCE((SELECT MAX(id) FROM pu
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Wy2z1xXThn6vBWcHPUeA9VbMaMCvRuCiCagaJeCImHGZwUOeWOIMSS3ev2cDCRT 
+\unrestrict Wy2z1xXThn6vBWcHPUeA9VbMaMCvRuCiCagaJeCImHGZwUOeWOIMSS3ev2cDCRT

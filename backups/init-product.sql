@@ -2,15 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict oEajqL8GZKFJlcKJ7ObgCWSgzlZiqTasstItimrqyvwaduxHBSpchTcAsup3m7d
-
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.4
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -42,6 +39,24 @@ CREATE TABLE public.products (
     CONSTRAINT products_category_check CHECK (((category)::text = ANY ((ARRAY['VINO_TINTO'::character varying, 'VINO_BLANCO'::character varying, 'VINO_ROSADO'::character varying, 'ESPUMANTE'::character varying, 'PISCO'::character varying])::text[])))
 );
 
+ALTER TABLE ONLY public.products ADD CONSTRAINT products_pkey PRIMARY KEY (id);
+
+--
+-- Name: warehouses; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.warehouses (
+    id bigint NOT NULL,
+    active boolean,
+    address character varying(255),
+    name character varying(255),
+    department character varying(255),
+    district character varying(255),
+    province character varying(255),
+    ubigeo_code character varying(255)
+);
+
+ALTER TABLE ONLY public.warehouses ADD CONSTRAINT warehouses_pkey PRIMARY KEY (id);
 
 --
 -- Data for Name: products; Type: TABLE DATA; Schema: public; Owner: -
@@ -61,7 +76,19 @@ COPY public.products (id, active, category, created_at, description, image_url, 
 12	f	VINO_TINTO	2026-04-29 18:17:24.635018	Vino tinto cabernet sauvignon	\N	Vino Tinto Cabernet	55.00	0	750	2020
 \.
 
+--
+-- Data for Name: warehouses; Type: TABLE DATA; Schema: public; Owner: -
+--
 
+COPY public.warehouses (id, active, address, name, department, district, province, ubigeo_code) FROM stdin;
+1	t	Av. Venezuela 892, Breña 15082	Vinos y Rosas Almacen	LIMA	BREÑA	LIMA	150105
+2	t	Av. Insurgentes 1819, Callao 07011	Viñera Parada	LIMA	LIMA	LIMA	150101
+3	t	Av. Túpac Amaru 1500	Almacén Lima Norte	LIMA	COMAS	LIMA	150110
+4	t	Jr. Cusco 200	Almacén Lima Centro	LIMA	LIMA	LIMA	150101
+5	t	Av. Ejercito 800	Almacén Arequipa	AREQUIPA	AREQUIPA	AREQUIPA	040101
+6	t	Carretera Panamericana 45	Almacén Ica	ICA	ICA	ICA	110101
+7	f	Av. España 600	Almacén Trujillo (cerrado)	LA LIBERTAD	TRUJILLO	TRUJILLO	130101
+\.
 
 --
 -- Sequence auto-generada para products (para permitir INSERTs nuevos desde el microservicio)
@@ -80,9 +107,23 @@ ALTER TABLE ONLY public.products ALTER COLUMN id SET DEFAULT nextval('public.pro
 
 SELECT pg_catalog.setval('public.products_id_seq', COALESCE((SELECT MAX(id) FROM public.products), 1), true);
 
+--
+-- Sequence auto-generada para warehouses (para permitir INSERTs nuevos desde el microservicio)
+--
+
+CREATE SEQUENCE public.warehouses_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.warehouses_id_seq OWNED BY public.warehouses.id;
+
+ALTER TABLE ONLY public.warehouses ALTER COLUMN id SET DEFAULT nextval('public.warehouses_id_seq'::regclass);
+
+SELECT pg_catalog.setval('public.warehouses_id_seq', COALESCE((SELECT MAX(id) FROM public.warehouses), 1), true);
 
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict oEajqL8GZKFJlcKJ7ObgCWSgzlZiqTasstItimrqyvwaduxHBSpchTcAsup3m7d
