@@ -36,7 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/audit-logs/**").hasAnyRole("ADMIN", "SOFTWARE_ENGINEER")
                         .requestMatchers("/api/bank-accounts/**").hasAnyRole("ADMIN", "SOFTWARE_ENGINEER")
                         .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "CAJERO", "SOFTWARE_ENGINEER")
-                        .requestMatchers("/api/purchases/**").hasAnyRole("ADMIN", "SOFTWARE_ENGINEER")
+                        .requestMatchers("/api/purchases/**").authenticated()
                         .requestMatchers("/api/suppliers/**").hasAnyRole("ADMIN", "SOFTWARE_ENGINEER")
                         .requestMatchers("/api/warehouses/**").hasAnyRole("LOGISTICA", "SOFTWARE_ENGINEER")
                         .requestMatchers("/api/transfer-guides/**").hasAnyRole("LOGISTICA", "SOFTWARE_ENGINEER")

@@ -25,7 +25,7 @@ public class InventoryController {
     }
 
     @GetMapping("/stock")
-    @PreAuthorize("hasAnyRole('VENDEDOR', 'LOGISTICA', 'SOFTWARE_ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO', 'VENDEDOR', 'LOGISTICA', 'SOFTWARE_ENGINEER')")
     public List<WarehouseStockResponse> getStock(
             @RequestParam(required = false) Long warehouseId) {
         if (warehouseId != null) return inventoryService.getStockByWarehouse(warehouseId);

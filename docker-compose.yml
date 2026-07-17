@@ -204,8 +204,8 @@ services:
       JWT_SECRET: una-clave-secreta-larga-y-aleatoria-para-firmar-tokens-1234567890
       SPRING_MAIL_HOST: smtp.gmail.com
       SPRING_MAIL_PORT: 587
-      SPRING_MAIL_USERNAME: test@example.com
-      SPRING_MAIL_PASSWORD: fakepassword
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
     depends_on:

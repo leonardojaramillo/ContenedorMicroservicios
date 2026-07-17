@@ -23,13 +23,13 @@ public class ProductController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('CAJERO', 'VENDEDOR', 'LOGISTICA', 'SOFTWARE_ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO', 'VENDEDOR', 'LOGISTICA', 'SOFTWARE_ENGINEER')")
     public List<ProductResponse> findAll() {
         return productService.findAll();
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CAJERO', 'VENDEDOR', 'LOGISTICA', 'SOFTWARE_ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO', 'VENDEDOR', 'LOGISTICA', 'SOFTWARE_ENGINEER')")
     public ProductResponse findById(@PathVariable Long id) {
         return productService.findById(id);
     }

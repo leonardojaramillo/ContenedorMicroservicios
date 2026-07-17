@@ -3,12 +3,11 @@ package com.grapevine.reporting.dashboard.dto;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Getter
 @Builder
-public class DashboardResponse implements Serializable {
+public class AdminDashboardResponse {
     private Long totalProducts;
     private Long totalOrders;
     private Long totalPurchases;

@@ -24,7 +24,7 @@ public class PurchaseController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SOFTWARE_ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CAJERO', 'LOGISTICA', 'SOFTWARE_ENGINEER')")
     public List<PurchaseResponse> findAll() {
         return purchaseService.findAll();
     }
@@ -48,7 +48,7 @@ public class PurchaseController {
     }
 
     @PatchMapping("/{id}/receive")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SOFTWARE_ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LOGISTICA', 'SOFTWARE_ENGINEER')")
     public PurchaseResponse receive(@PathVariable Long id) {
         return purchaseService.updateStatus(id, PurchaseStatus.RECEIVED);
     }

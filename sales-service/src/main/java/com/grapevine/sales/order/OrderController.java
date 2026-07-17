@@ -23,7 +23,7 @@ public class OrderController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('VENDEDOR', 'CAJERO', 'SOFTWARE_ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'CAJERO', 'SOFTWARE_ENGINEER')")
     public List<OrderResponse> findAll() {
         return orderService.findAll();
     }

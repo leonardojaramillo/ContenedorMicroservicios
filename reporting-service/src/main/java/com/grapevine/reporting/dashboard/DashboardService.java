@@ -6,7 +6,10 @@ import com.grapevine.reporting.client.PurchaseClient;
 import com.grapevine.reporting.client.SalesClient;
 import com.grapevine.reporting.client.dto.OrderResponse;
 import com.grapevine.reporting.client.dto.WarehouseStockResponse;
-import com.grapevine.reporting.dashboard.dto.DashboardResponse;
+import com.grapevine.reporting.dashboard.dto.AdminDashboardResponse;
+import com.grapevine.reporting.dashboard.dto.CajeroDashboardResponse;
+import com.grapevine.reporting.dashboard.dto.LogisticaDashboardResponse;
+import com.grapevine.reporting.dashboard.dto.VendedorDashboardResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -26,37 +29,67 @@ public class DashboardService {
     private final PurchaseClient purchaseClient;
     private final InventoryClient inventoryClient;
 
-    @Cacheable("dashboard-metrics")
-    public DashboardResponse getMetrics() {
+    public Object getMetrics(String role) {
+        return switch (role) {
+            case "ADMIN", "SOFTWARE_ENGINEER" -> getAdminMetrics();
+            case "CAJERO" -> getCajeroMetrics();
+            case "LOGISTICA" -> getLogisticaMetrics();
+            case "VENDEDOR" -> getVendedorMetrics();
+            default -> getVendedorMetrics();
+        };
+    }
 
-        Long totalProducts = (long) productClient.findAll().size();
+    @Cacheable("dashboard-admin")
+    public AdminDashboardResponse getAdminMetrics() {
         List<OrderResponse> orders = salesClient.findAll();
-        Long totalOrders = (long) orders.size();
-        Long totalPurchases = (long) purchaseClient.findAll().size();
 
-        BigDecimal totalSales = orders.stream()
-                .filter(o -> "PAID".equals(o.getStatus()))
-                .map(OrderResponse::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        LocalDate today = LocalDate.now();
-        BigDecimal todaySales = orders.stream()
-                .filter(o -> "PAID".equals(o.getStatus())
-                        && o.getCreatedAt() != null
-                        && o.getCreatedAt().toLocalDate().isEqual(today))
-                .map(OrderResponse::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        Long lowStockProducts = countLowStockProducts();
-
-        return DashboardResponse.builder()
-                .totalProducts(totalProducts)
-                .totalOrders(totalOrders)
-                .totalPurchases(totalPurchases)
-                .totalSales(totalSales)
-                .todaySales(todaySales)
-                .lowStockProducts(lowStockProducts)
+        return AdminDashboardResponse.builder()
+                .totalProducts((long) productClient.findAll().size())
+                .totalOrders((long) orders.size())
+                .totalPurchases((long) purchaseClient.findAll().size())
+                .totalSales(sumPaid(orders, null))
+                .todaySales(sumPaid(orders, LocalDate.now()))
+                .lowStockProducts(countLowStockProducts())
                 .build();
+    }
+
+    @Cacheable("dashboard-cajero")
+    public CajeroDashboardResponse getCajeroMetrics() {
+        List<OrderResponse> orders = salesClient.findAll();
+
+        return CajeroDashboardResponse.builder()
+                .totalOrders((long) orders.size())
+                .totalSales(sumPaid(orders, null))
+                .todaySales(sumPaid(orders, LocalDate.now()))
+                .build();
+    }
+
+    @Cacheable("dashboard-logistica")
+    public LogisticaDashboardResponse getLogisticaMetrics() {
+        return LogisticaDashboardResponse.builder()
+                .totalProducts((long) productClient.findAll().size())
+                .lowStockProducts(countLowStockProducts())
+                .build();
+    }
+
+    @Cacheable("dashboard-vendedor")
+    public VendedorDashboardResponse getVendedorMetrics() {
+        List<OrderResponse> orders = salesClient.findAll();
+
+        return VendedorDashboardResponse.builder()
+                .totalProducts((long) productClient.findAll().size())
+                .totalOrders((long) orders.size())
+                .todaySales(sumPaid(orders, LocalDate.now()))
+                .build();
+    }
+
+    private BigDecimal sumPaid(List<OrderResponse> orders, LocalDate onlyDate) {
+        return orders.stream()
+                .filter(o -> "PAID".equals(o.getStatus()))
+                .filter(o -> onlyDate == null
+                        || (o.getCreatedAt() != null && o.getCreatedAt().toLocalDate().isEqual(onlyDate)))
+                .map(OrderResponse::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Long countLowStockProducts() {

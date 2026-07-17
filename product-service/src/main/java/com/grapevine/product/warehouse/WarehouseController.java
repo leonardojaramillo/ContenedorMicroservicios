@@ -23,7 +23,7 @@ public class WarehouseController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('LOGISTICA', 'SOFTWARE_ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LOGISTICA', 'VENDEDOR', 'SOFTWARE_ENGINEER')")
     public List<WarehouseResponse> findAll() {
         return warehouseService.findAll();
     }
@@ -34,8 +34,9 @@ public class WarehouseController {
                                     @RequestBody UpdateWarehouseRequest request) {
         return warehouseService.update(id, request);
     }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('LOGISTICA', 'SOFTWARE_ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'LOGISTICA', 'VENDEDOR', 'SOFTWARE_ENGINEER')")
     public WarehouseResponse findById(@PathVariable Long id) {
         return warehouseService.findById(id);
     }
@@ -45,5 +46,4 @@ public class WarehouseController {
     public WarehouseResponse toggleActive(@PathVariable Long id) {
         return warehouseService.toggleActive(id);
     }
-
 }
